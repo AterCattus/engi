@@ -19,10 +19,11 @@ type Resource struct {
 }
 
 type Loader struct {
-	resources []Resource
-	images    map[string]*Texture
-	jsons     map[string]string
-	sounds    map[string]*Sound
+	resources  []Resource
+	images     map[string]*Texture
+	jsons      map[string]string
+	sounds     map[string]*Sound
+	progressCb func(ready, total int)
 }
 
 func NewLoader() *Loader {
@@ -52,9 +53,9 @@ func (l *Loader) Sound(name string) *Sound {
 }
 
 func (l *Loader) Load(onFinish func()) {
-	for _, r := range l.resources {
+	for i, r := range l.resources {
 		switch r.kind {
-		case "png":
+		case "png", "jpg":
 			data, err := loadImage(r)
 			if err == nil {
 				l.images[r.name] = NewTexture(data)
@@ -64,14 +65,22 @@ func (l *Loader) Load(onFinish func()) {
 			if err == nil {
 				l.jsons[r.name] = data
 			}
-		case "wav":
+		case "wav", "ogg", "mp3":
 			data, err := audio.NewSimplePlayer(r.url)
 			if err == nil {
 				l.sounds[r.name] = &Sound{data}
 			}
 		}
+		if l.progressCb != nil {
+			l.progressCb(i+1, len(l.resources))
+		}
+
 	}
 	onFinish()
+}
+
+func (l *Loader) SetProgress(cb func(ready, total int)) {
+	l.progressCb = cb
 }
 
 type Image interface {
